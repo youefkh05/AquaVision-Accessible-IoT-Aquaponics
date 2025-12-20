@@ -1,121 +1,212 @@
-💧 AquaVision: An Accessible, Dual-Node IoT Monitoring System for Aquaponic Farms
+# Smart Parking IoT System
 
-This repository contains the complete design, code, and documentation for AquaVision, an Internet of Things (IoT) solution developed to provide real-time, remote monitoring of critical parameters (Temperature and Water Level) in small-scale aquaponic environments.
+![Smart Parking IoT](https://raw.githubusercontent.com/youefkh05/Smart-Park-IoT-System/main/cover.png)
 
-The project is specifically designed as Assistive Technology, enabling users with disabilities to manage and monitor their farms without the need for physical presence or complex visual analysis through the use of a Voice-Activated AI Chatbot and automated SMS alerts.
+## Table of Contents
+1. [Project Overview](#project-overview)  
+2. [System Architecture](#system-architecture)  
+3. [Hardware Components](#hardware-components)  
+4. [Software Architecture](#software-architecture)  
+5. [Data Communication](#data-communication)  
+6. [Data Flow & Storage](#data-flow--storage)  
+7. [Deployment & Prototype](#deployment--prototype)  
+8. [References](#references)
 
-🌟 Key Features
+## 📌 1. Project Overview
 
-Dual-Node Architecture: Uses two ESP32 devices (Center Node and Edge Node) for distributed monitoring and robust communication.
+The **Smart Parking IoT System** is an end-to-end solution for real-time parking monitoring, occupancy detection, gateway aggregation, centralized control, and cloud-based access using scalable IoT infrastructure.  
+The system integrates:
 
-Decentralized Communication: Employs the ESP-NOW protocol for ultra-low power, low-latency communication between nodes in the farm.
+- ESP32-based parking slot nodes  
+- Gate vehicle counting subsystem  
+- Zone gateways for data aggregation  
+- Central edge controller (dashboard & cloud sync)  
+- Cloud backend for analytics, mobile API, and historical data
 
-Remote Connectivity: Utilizes a GSM Module (with optional Wi-Fi fallback) on the Edge Node/Gateway for reliable cloud connectivity, crucial for rural or remote deployment.
+This repository provides **software implementation**, **hardware specifications**, and **architectural documentation** for the complete system.
 
-Accessibility Focus: Integrates with a MATLAB-based AI Chatbot (Initial Prototype) and a Web Dashboard (IoT-Enhanced Version) for natural language status queries and remote management.
+GitHub Repo: https://github.com/youefkh05/Smart-Park-IoT-System
 
-Cloud Backend: Stores all real-time data securely in a Firebase Realtime Database.
+---
 
-Intelligent Alerting: Automated SMS and buzzer alerts for critical parameters like low water level.
+## 📌 2. System Architecture
 
-⚙️ System Architecture (IoT-Enhanced Version)
+The system follows a **three-tier IoT architecture**:
 
-The system operates on a Star-of-Stars topology, optimized for power efficiency and reliability.
+### **Perception Layer**
+- Parking slot sensors (IR + ultrasonic)
+- Vehicle presence detection
 
-1. Physical Layer (Nodes)
+### **Aggregation Layer**
+- Zone gateways aggregate multiple slot ESPs
+- Wireless uplink (LoRa / sub-GHz) / Wi-Fi
 
-Component
+### **Application Layer**
+- Central node (edge controller with local dashboard)
+- Cloud backend (MQTT Broker, storage, analytics)
 
-Role
+**Figure 9.5 — System Architecture** illustrates the layered design.
 
-Function
+---
 
-Wireless Protocol
+## 📌 3. Hardware Components
 
-Center Node
+### Table 10.1 — IR Parking Occupancy Sensor  
+| Parameter | Specification |
+|-----------|---------------|
+| Sensor Type | Infrared Reflective Proximity |
+| Model | TCRT5000 |
+| Manufacturer | Vishay Semiconductors |
+| Detection | IR + phototransistor |
+| Range | 1–15 cm |
+| Output | Digital / Analog |
+| Role | Detect vehicle presence |
 
-Sensor Client
+> Datasheet Reference: [16]
 
-Measures water level ($\text{HC-SR04/VL53L0X}$) and temperature ($\text{DS18B20}$) in deep water. Battery-powered for mobility.
+### Table 10.2 — Ultrasonic Distance Sensor  
+| Parameter | Specification |
+| Sensor Type | Ultrasonic Ranging Module |
+| Model | HC-SR04 |
+| Manufacturer | Generic |
+| Range | 2 cm – 400 cm |
+| Accuracy | ±1 cm |
+| Interface | Trigger/Echo GPIO |
+| Role | Redundancy for occupancy confirmation |
 
-ESP-NOW (Client)
+> Datasheet Reference: [17]
 
-Edge Node
+### Table 10.3 — Sensor Node Controller  
+| Parameter | Specification |
+| MCU | ESP32-WROOM-32 |
+| Manufacturer | Espressif Systems |
+| CPU | Dual-core Xtensa LX6 @ 240 MHz |
+| RAM | 520 KB SRAM |
+| Flash | 4 MB |
+| Wireless | Wi-Fi & BLE |
+| Voltage | 3.3 V |
+| Role | Sensor control, data TX |
 
-Gateway / Server
+> Datasheet Reference: [18]
 
-Receives data from the Center Node via ESP-NOW, aggregates local data, and forwards all information to the cloud. Wall-powered.
+### Table 10.4 — Gateway Node Hardware  
+| Parameter | Specification |
+| Gateway | Raspberry Pi Zero W |
+| Manufacturer | Raspberry Pi Ltd. |
+| CPU | ARM1176JZF-S @ 1 GHz |
+| RAM | 512 MB |
+| Connectivity | Wi-Fi, USB Ethernet |
+| OS | Raspberry Pi OS |
+| Role | Zone aggregation & forwarding |
 
-ESP-NOW (Server)
+> Datasheet Reference: [19]
 
-2. Network and Cloud Layer
+### Table 10.5 — Central Node Hardware  
+| Parameter | Specification |
+| Platform | Raspberry Pi 5 |
+| Manufacturer | Raspberry Pi Ltd. |
+| CPU | Quad-core ARM Cortex-A76 @ 2.4 GHz |
+| RAM | 4 GB LPDDR4X |
+| Storage | microSD / NVMe (PCIe) |
+| Connectivity | Gigabit Ethernet, USB3.0 |
+| Role | Dashboard, control, cloud sync |
 
-Gateway-to-Cloud: $\text{GSM/GPRS (via SIM800L)}$ over $\text{HTTPS}$. This ensures connectivity even without local Wi-Fi.
+> Datasheet Reference: [20]
 
-Cloud Service: Firebase Realtime Database and Cloud Functions for data processing, authentication, and alert generation.
+---
 
-Software Protocol: Firebase REST API for low-overhead, secure data transmission.
+## 📌 4. Software Architecture
 
-🛠️ Project Evolution & Phases
+Smart Parking software spans three layers:
 
-The project was developed in two distinct phases to ensure functionality and scalability.
+### 4.1 Sensor Node Firmware
+- **Platform:** ESP32 (Arduino / FreeRTOS)  
+- **Language:** C/C++  
+- Reads slot sensors and transmits occupancy data  
+- Deep sleep for power efficiency
 
-Phase 1: Proof-of-Concept (MATLAB Prototype)
+### 4.2 Gateway Software
+- **Platform:** Raspberry Pi Zero W  
+- **Language:** Python  
+- MQTT subscriber, aggregator, publisher
 
-Goal: Validate sensor accuracy and the AI Chatbot interface.
+### 4.3 Central Node & Cloud Services
+- **Platform:** Raspberry Pi 5 (Flask / SQLite)  
+- **Cloud:** AWS IoT Core + Lambda + RDS/S3  
+- Web & mobile API
 
-Components: Single ESP32 connected directly to a PC via Serial/USB.
+**Table 12 — Software Architecture** details layers and technologies.
 
-Interface: MATLAB Desktop Application (GUI + AI Chatbot).
+> Software doc reference: [13]
 
-Limitation: Not a true IoT system (no wireless node communication or remote access).
+---
 
-Phase 2: IoT-Enhanced Deployment (Final System)
+## 📌 5. Data Communication
 
-Goal: Achieve full remote monitoring and robust connectivity for real-world deployment.
+| Link | Protocol | Medium |
+|------|----------|--------|
+| Sensor → Gateway | LoRa / sub-GHz | Star (non-mesh) |
+| Gateway → Central | TCP/IP over Ethernet | CAT6 |
+| Central → Cloud | MQTT over TLS | 4G LTE / Broadband |
 
-Components: Dual ESP32 nodes, SIM800L GSM module.
+**Table 5 — MQTT Advantages**  
+| Feature | Benefit |
+| Publish/Subscribe | Scalable multi-client access |
+| QoS 1 | Guaranteed delivery |
+| Lightweight header | Ideal for low power |
+| Persistent sessions | Buffered during outages |
 
-Communication: ESP-NOW (Node-to-Node) and GSM (Gateway-to-Cloud).
+> MQTT standard: [21]
 
-Interface: Web Dashboard accessible via HTTPS.
+---
 
-Status: This is the version documented for the Final Report.
+## 📌 6. Data Flow & Storage
 
-📂 Repository Structure (To be filled with code)
+**Table 8 — System-Wide Data Flow & Storage** demonstrates volumes:
+- ~2.6 MB/day total traffic
+- ~78 MB/month
+- ~396 MB/year cloud storage
 
-Directory
+**Figure 7.5 — System-Wide Data Flow & Storage** visually captures actual movement from physical sensors to cloud storage.
 
-Content Description
+Cloud data references: [11]
 
-01_Firmware_CenterNode
+---
 
-Arduino/C++ code for the battery-powered Center Node (ESP-NOW client).
+## 📌 7. Deployment & Prototype
 
-02_Firmware_EdgeNode_Gateway
+### 7.1 Gate Monitoring Subsystem  
+**Figure 13.2 — Gate Monitoring Subsystem**  
+- IR sensors trigger vehicle count
+- Counter maintains park occupancy estimate
 
-Arduino/C++ code for the Edge Node (ESP-NOW server, GSM/Firebase client).
+### 7.2 Slot Sensing Subsystem  
+**Figure 13.3 — Slot-Level ESP Distribution**  
+- One ESP per five slots
+- Bitmask occupancy
 
-03_MATLAB_AI_Chatbot
+### 7.3 Gateway Aggregation Subsystem  
+**Figure 13.4 — Gateway Aggregation Logic**  
+- Combines slot and gate data
+- Determines parking availability
 
-MATLAB scripts and GUI files for the Proof-of-Concept AI interface.
+---
 
-04_Web_Dashboard
+## 📌 References
 
-HTML, CSS, and JavaScript for the Firebase-integrated web dashboard.
+```text
+[11] Geng, Y., & Cassandras, C. G., “New ‘Smart Parking’ System Based on Resource Allocation…,” IEEE Trans. on ITS, Sep. 2013.
 
-05_Hardware_Design
+[13] Python Software Foundation; Raspberry Pi Ltd.; Meta Platforms, Inc.; SQLite Consortium, “Official Documentation for Raspberry Pi OS, Flask…,” 2018–2024.
 
-Fritzing diagrams, PCB layouts, and component datasheets.
+[16] Vishay Semiconductors, “TCRT5000 Reflective Optical Sensor Datasheet,” Vishay Intertechnology, Inc., Mar. 2019.
 
-Documentation
+[17] Robot Electronics Ltd., “HC-SR04 Ultrasonic Ranging Module Datasheet,” United Kingdom, 2018.
 
-Final Report, Initial Report, and Presentation materials.
+[18] Espressif Systems, “ESP32-WROOM-32 Datasheet,” Version 3.9, 2022.
 
-🤝 Group Members & Contact
+[19] Raspberry Pi Ltd., “Raspberry Pi Zero W Product Brief,” Raspberry Pi Foundation, 2020.
 
-[Yousef Khaled Omar Mahmoud] - Lead Engineer, Firmware & Hardware Integration
+[20] Raspberry Pi Ltd., “Raspberry Pi 5 Product Brief,” Raspberry Pi Foundation, Oct. 2023.
 
-[Partner Name] - Cloud & Web Interface Development
-
-Developed for ELC4015: Selected Topics in Communications: Internet of Things, Cairo University.
+[21] OASIS Standard, “MQTT Version 3.1.1,” Oct. 2014.
